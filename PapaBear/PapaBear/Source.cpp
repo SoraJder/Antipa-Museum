@@ -454,8 +454,6 @@ void RenderFrame()
 	}
 }
 
-
-
 void Cleanup()
 {
 	DestroyShaders();

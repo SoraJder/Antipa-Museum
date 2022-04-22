@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{8fc56e1d-6f00-4242-a31f-2329b4d999ef}</ProjectGuid>
+    <ProjectGuid>{3c32c059-9899-4289-adaa-c1497d80af4b}</ProjectGuid>
     <RootNamespace>PapaBear</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -72,13 +72,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\..\..\External\glfw-3.3.6.bin.WIN32\include\GLFW;..\..\..\External\glm\glm;..\..\..\External\freeglut\include;..\..\..\External\glew-2.1.0\include;..\..\..\External\stb-master;$(IncludePath)</IncludePath>
-    <LibraryPath>..\..\..\External\glew-2.1.0\lib\Release\Win32;..\..\..\External\freeglut\lib;..\..\..\External\glfw-3.3.6.bin.WIN32\lib-vc2019;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\External\glm\glm;..\External\glew-2.1.0\include;..\External\stb-master;..\External\glfw-3.3.6.bin.WIN32\include\GLFW;$(IncludePath)</IncludePath>
+    <LibraryPath>..\External\glfw-3.3.6.bin.WIN32\lib-vc2019;..\External\glew-2.1.0\lib\Release\Win32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\..\..\External\glfw-3.3.6.bin.WIN32\include\GLFW;..\..\..\External\glm\glm;..\..\..\External\freeglut\include;..\..\..\External\glew-2.1.0\include;..\..\..\External\stb-master;$(IncludePath)</IncludePath>
-    <LibraryPath>..\..\..\External\glew-2.1.0\lib\Release\Win32;..\..\..\External\freeglut\lib;..\..\..\External\glfw-3.3.6.bin.WIN32\lib-vc2019;$(LibraryPath)</LibraryPath>
+    <IncludePath>..\External\glm\glm;..\External\glew-2.1.0\include;..\External\stb-master;..\External\glfw-3.3.6.bin.WIN32\include\GLFW;$(IncludePath)</IncludePath>
+    <LibraryPath>..\External\glfw-3.3.6.bin.WIN32\lib-vc2019;..\External\glew-2.1.0\lib\Release\Win32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -143,7 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source.cpp" />
+    <ClCompile Include="PapaBear.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

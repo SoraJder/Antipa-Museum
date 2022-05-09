@@ -1,12 +1,10 @@
-// Lab5.cpp : Defines the entry point for the console application.
-//
-
-#include <stdlib.h> // necesare pentru citirea shader-elor
+#include <stdlib.h> 
 #include <stdio.h>
-#include <math.h>
+#include <math.h> 
 
 #include <GL/glew.h>
 
+#define GLM_FORCE_CTOR_INIT 
 #include <GLM.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
@@ -14,36 +12,44 @@
 #include <glfw3.h>
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#include "OBJ_Loader.h"
 #pragma comment (lib, "glfw3dll.lib")
 #pragma comment (lib, "glew32.lib")
 #pragma comment (lib, "OpenGL32.lib")
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
+bool rot = false;
+objl::Loader Loader;
+enum ECameraMovementType
+{
+	UNKNOWN,
+	FORWARD,
+	BACKWARD,
+	LEFT,
+	RIGHT,
+	UP,
+	DOWN
+};
 
 class Camera
 {
 private:
 	// Default camera values
 	const float zNEAR = 0.1f;
-	const float zFAR = 500.f;
+	const float zFAR = 1000.f;
 	const float YAW = -90.0f;
 	const float PITCH = 0.0f;
 	const float FOV = 45.0f;
 	glm::vec3 startPosition;
 
 public:
-	enum EMovementType {
-		EForward,
-		EBackward,
-		ELeft,
-		ERight,
-		EPageUp,
-		EPageDown
-	};
-
 	Camera(const int width, const int height, const glm::vec3& position)
 	{
 		startPosition = position;
@@ -72,6 +78,25 @@ public:
 		UpdateCameraVectors();
 	}
 
+	void Reset(const int width, const int height)
+	{
+		Set(width, height, startPosition);
+	}
+
+	void Reshape(int windowWidth, int windowHeight)
+	{
+		width = windowWidth;
+		height = windowHeight;
+
+		// define the viewport transformation
+		glViewport(0, 0, windowWidth, windowHeight);
+	}
+
+	const glm::vec3 GetPosition() const
+	{
+		return position;
+	}
+
 	const glm::mat4 GetViewMatrix() const
 	{
 		// Returns the View Matrix
@@ -92,6 +117,64 @@ public:
 				-height / scaleFactor, height / scaleFactor, -zFar, zFar);
 		}
 		return Proj;
+	}
+
+	void ProcessKeyboard(ECameraMovementType direction, float deltaTime)
+	{
+		float velocity = (float)(cameraSpeedFactor * deltaTime);
+		switch (direction) {
+		case ECameraMovementType::FORWARD:
+			position += forward * velocity;
+			break;
+		case ECameraMovementType::BACKWARD:
+			position -= forward * velocity;
+			break;
+		case ECameraMovementType::LEFT:
+			position -= right * velocity;
+			break;
+		case ECameraMovementType::RIGHT:
+			position += right * velocity;
+			break;
+		case ECameraMovementType::UP:
+			position += up * velocity;
+			break;
+		case ECameraMovementType::DOWN:
+			position -= up * velocity;
+			break;
+		}
+	}
+
+	void MouseControl(float xPos, float yPos)
+	{
+		if (bFirstMouseMove) {
+			lastX = xPos;
+			lastY = yPos;
+			bFirstMouseMove = false;
+		}
+
+		float xChange = xPos - lastX;
+		float yChange = lastY - yPos;
+		lastX = xPos;
+		lastY = yPos;
+
+		if (fabs(xChange) <= 1e-6 && fabs(yChange) <= 1e-6) {
+			return;
+		}
+		xChange *= mouseSensitivity;
+		yChange *= mouseSensitivity;
+
+		ProcessMouseMovement(xChange, yChange);
+	}
+
+	void ProcessMouseScroll(float yOffset)
+	{
+		if (FoVy >= 1.0f && FoVy <= 90.0f) {
+			FoVy -= yOffset;
+		}
+		if (FoVy <= 1.0f)
+			FoVy = 1.0f;
+		if (FoVy >= 90.0f)
+			FoVy = 90.0f;
 	}
 
 private:
@@ -128,7 +211,7 @@ private:
 	}
 
 protected:
-	const float cameraSpeedFactor = 2.5f;
+	const float cameraSpeedFactor = 90.5f;
 	const float mouseSensitivity = 0.1f;
 
 	// Perspective properties
@@ -151,328 +234,220 @@ protected:
 
 	bool bFirstMouseMove = true;
 	float lastX = 0.f, lastY = 0.f;
-
-public:
-	void ProcessKeyboard(EMovementType movementType, float deltaTime) {
-		float movementStep = deltaTime * cameraSpeedFactor;
-		switch (movementType)
-		{
-		case Camera::EForward:
-			this->position += this->forward * movementStep;
-			break;
-		case Camera::EBackward:
-			this->position += this->forward * -movementStep;
-			break;
-		case Camera::ELeft:
-			this->position += this->right * -movementStep;
-			break;
-		case Camera::ERight:
-			this->position += this->right * movementStep;
-			break;
-		case Camera::EPageUp:
-			this->position += this->up * movementStep;
-			break;
-		case Camera::EPageDown:
-			this->position += this->up * -movementStep;
-			break;
-		default:
-			break;
-		}
-		UpdateCameraVectors();
-	}
-
-	void MouseControl(float xPos, float yPos) {
-
-		if (bFirstMouseMove) {
-			lastX = xPos;
-			lastY = yPos;
-			bFirstMouseMove = false;
-		}
-
-		float xChange = xPos - lastX;
-		float yChange = lastY - yPos;
-		lastX = xPos;
-		lastY = yPos;
-
-		if (fabs(xChange) <= 1e-6 && fabs(yChange) <= 1e-6) {
-			return;
-		}
-		xChange *= mouseSensitivity;
-		yChange *= mouseSensitivity;
-
-		ProcessMouseMovement(xChange, yChange);
-	}
-
-	void ProcessMouseScroll(float offset) {
-		this->FoVy -= offset;
-	}
-
 };
 
-GLuint VaoId, VboId, IboId, ColorBufferId, VertexShaderId, FragmentShaderId, ProgramId;
-GLuint ProjMatrixLocation, ViewMatrixLocation, WorldMatrixLocation;
+class Shader
+{
+public:
+	// constructor generates the shaderStencilTesting on the fly
+	// ------------------------------------------------------------------------
+	Shader(const char* vertexPath, const char* fragmentPath)
+	{
+		Init(vertexPath, fragmentPath);
+	}
+
+	~Shader()
+	{
+		glDeleteProgram(ID);
+	}
+
+	// activate the shaderStencilTesting
+	// ------------------------------------------------------------------------
+	void Use() const
+	{
+		glUseProgram(ID);
+	}
+
+	unsigned int GetID() const { return ID; }
+
+	// MVP
+	unsigned int loc_model_matrix;
+	unsigned int loc_view_matrix;
+	unsigned int loc_projection_matrix;
+
+	// utility uniform functions
+	void SetInt(const std::string& name, int value) const
+	{
+		glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
+	}
+	void SetFloat(const std::string& name, float value) const
+	{
+		glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
+	}
+	void SetVec3(const std::string& name, const glm::vec3& value) const
+	{
+		glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+	}
+	void SetVec3(const std::string& name, float x, float y, float z) const
+	{
+		glUniform3f(glGetUniformLocation(ID, name.c_str()), x, y, z);
+	}
+	void SetMat4(const std::string& name, const glm::mat4& mat) const
+	{
+		glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
+	}
+
+private:
+	void Init(const char* vertexPath, const char* fragmentPath)
+	{
+		// 1. retrieve the vertex/fragment source code from filePath
+		std::string vertexCode;
+		std::string fragmentCode;
+		std::ifstream vShaderFile;
+		std::ifstream fShaderFile;
+		// ensure ifstream objects can throw exceptions:
+		vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		try {
+			// open files
+			vShaderFile.open(vertexPath);
+			fShaderFile.open(fragmentPath);
+			std::stringstream vShaderStream, fShaderStream;
+			// read file's buffer contents into streams
+			vShaderStream << vShaderFile.rdbuf();
+			fShaderStream << fShaderFile.rdbuf();
+			// close file handlers
+			vShaderFile.close();
+			fShaderFile.close();
+			// convert stream into string
+			vertexCode = vShaderStream.str();
+			fragmentCode = fShaderStream.str();
+		}
+		catch (std::ifstream::failure e) {
+			std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+		}
+		const char* vShaderCode = vertexCode.c_str();
+		const char* fShaderCode = fragmentCode.c_str();
+
+		// 2. compile shaders
+		unsigned int vertex, fragment;
+		// vertex shaderStencilTesting
+		vertex = glCreateShader(GL_VERTEX_SHADER);
+		glShaderSource(vertex, 1, &vShaderCode, NULL);
+		glCompileShader(vertex);
+		CheckCompileErrors(vertex, "VERTEX");
+		// fragment Shader
+		fragment = glCreateShader(GL_FRAGMENT_SHADER);
+		glShaderSource(fragment, 1, &fShaderCode, NULL);
+		glCompileShader(fragment);
+		CheckCompileErrors(fragment, "FRAGMENT");
+		// shaderStencilTesting Program
+		ID = glCreateProgram();
+		glAttachShader(ID, vertex);
+		glAttachShader(ID, fragment);
+		glLinkProgram(ID);
+		CheckCompileErrors(ID, "PROGRAM");
+
+		// 3. delete the shaders as they're linked into our program now and no longer necessery
+		glDeleteShader(vertex);
+		glDeleteShader(fragment);
+	}
+
+	// utility function for checking shaderStencilTesting compilation/linking errors.
+	// ------------------------------------------------------------------------
+	void CheckCompileErrors(unsigned int shaderStencilTesting, std::string type)
+	{
+		GLint success;
+		GLchar infoLog[1024];
+		if (type != "PROGRAM") {
+			glGetShaderiv(shaderStencilTesting, GL_COMPILE_STATUS, &success);
+			if (!success) {
+				glGetShaderInfoLog(shaderStencilTesting, 1024, NULL, infoLog);
+				std::cout << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+			}
+		}
+		else {
+			glGetProgramiv(shaderStencilTesting, GL_LINK_STATUS, &success);
+			if (!success) {
+				glGetProgramInfoLog(shaderStencilTesting, 1024, NULL, infoLog);
+				std::cout << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+			}
+		}
+	}
+private:
+	unsigned int ID;
+};
 
 Camera* pCamera = nullptr;
 
-// Shader-ul de varfuri / Vertex shader (este privit ca un sir de caractere)
-const GLchar* VertexShader =
+unsigned int CreateTexture(const std::string& strTexturePath)
 {
-   "#version 400\n"\
-   "layout(location=0) in vec4 in_Position;\n"\
-   "layout(location=1) in vec4 in_Color;\n"\
-   "out vec4 ex_Color;\n"\
-   "uniform mat4 ProjMatrix;\n"\
-   "uniform mat4 ViewMatrix;\n"\
-   "uniform mat4 WorldMatrix;\n"\
-   "void main()\n"\
-   "{\n"\
-   "  gl_Position = ProjMatrix * ViewMatrix * WorldMatrix * in_Position;\n"\
-   "  ex_Color = in_Color;\n"\
-   "}\n"
-};
-// Shader-ul de fragment / Fragment shader (este privit ca un sir de caractere)
-const GLchar* FragmentShader =
-{
-   "#version 400\n"\
-   "in vec4 ex_Color;\n"\
-   "out vec4 out_Color;\n"\
-   "void main()\n"\
-   "{\n"\
-   "  out_Color = ex_Color;\n"\
-   "}\n"
-};
+	unsigned int textureId = -1;
 
-void CreateVBO()
-{
-	// indexurile cubului
-	unsigned int Indices[] = {
-	   0,1,2,
-	   0,2,3,
-	   1,5,6,
-	   1,6,2,
-	   5,4,7,
-	   5,7,6,
-	   4,0,3,
-	   4,3,7,
-	   0,5,1,
-	   0,4,5,
-	   3,2,6,
-	   3,6,7
-	};
+	// load image, create texture and generate mipmaps
+	int width, height, nrChannels;
+	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
+	unsigned char* data = stbi_load(strTexturePath.c_str(), &width, &height, &nrChannels, 0);
+	if (data) {
+		GLenum format;
+		if (nrChannels == 1)
+			format = GL_RED;
+		else if (nrChannels == 3)
+			format = GL_RGB;
+		else if (nrChannels == 4)
+			format = GL_RGBA;
 
-	// varfurile cubului
-	GLfloat Vertices[] = {
-	   0.0f, 0.0f, 1.0f, 1.0f,
-	   1.0f, 0.0f, 1.0f, 1.0f,
-	   1.0f, 1.0f, 1.0f, 1.0f,
-	   0.0f, 1.0f, 1.0f, 1.0f,
-	   0.0f, 0.0f, 0.0f, 1.0f,
-	   1.0f, 0.0f, 0.0f, 1.0f,
-	   1.0f, 1.0f, 0.0f, 1.0f,
-	   0.0f, 1.0f, 0.0f, 1.0f
-	};
-	// culorile, ca atribute ale varfurilor
-	GLfloat Colors[] = {
-	   1.0f, 0.0f, 0.0f, 1.0f,
-	   0.0f, 1.0f, 0.0f, 1.0f,
-	   0.0f, 0.0f, 1.0f, 1.0f,
-	   1.0f, 0.0f, 0.0f, 1.0f,
-	   0.0f, 1.0f, 0.0f, 1.0f,
-	   0.0f, 0.0f, 1.0f, 1.0f,
-	   1.0f, 0.0f, 0.0f, 1.0f,
-	   0.0f, 1.0f, 0.0f, 1.0f
-	};
+		glGenTextures(1, &textureId);
+		glBindTexture(GL_TEXTURE_2D, textureId);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
 
-	// se creeaza un buffer nou
-	glGenBuffers(1, &VboId);
-	// este setat ca buffer curent
-	glBindBuffer(GL_ARRAY_BUFFER, VboId);
-	// punctele sunt "copiate" in bufferul curent
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertices), Vertices, GL_STATIC_DRAW);
-
-	// se creeaza / se leaga un VAO (Vertex Array Object) - util cand se utilizeaza mai multe VBO
-	glGenVertexArrays(1, &VaoId);
-	glBindVertexArray(VaoId);
-
-	// se activeaza lucrul cu atribute; atributul 0 = pozitie
-	glEnableVertexAttribArray(0);
-	//
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
-
-	// un nou buffer, pentru culoare
-	glGenBuffers(1, &ColorBufferId);
-	glBindBuffer(GL_ARRAY_BUFFER, ColorBufferId);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Colors), Colors, GL_STATIC_DRAW);
-	// atributul 1 =  culoare
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, 0);
-
-	// un nou buffer pentru indexuri
-	glGenBuffers(1, &IboId);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IboId);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Indices), Indices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-}
-void DestroyVBO()
-{
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glDeleteBuffers(1, &ColorBufferId);
-	glDeleteBuffers(1, &VboId);
-	glBindVertexArray(0);
-	glDeleteVertexArrays(1, &VaoId);
-}
-void CreateShaders()
-{
-	VertexShaderId = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(VertexShaderId, 1, &VertexShader, NULL);
-	glCompileShader(VertexShaderId);
-
-	FragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(FragmentShaderId, 1, &FragmentShader, NULL);
-	glCompileShader(FragmentShaderId);
-
-	ProgramId = glCreateProgram();
-	glAttachShader(ProgramId, VertexShaderId);
-	glAttachShader(ProgramId, FragmentShaderId);
-	glLinkProgram(ProgramId);
-
-	GLint Success = 0;
-	GLchar ErrorLog[1024] = { 0 };
-
-	glGetProgramiv(ProgramId, GL_LINK_STATUS, &Success);
-	if (Success == 0) {
-		glGetProgramInfoLog(ProgramId, sizeof(ErrorLog), NULL, ErrorLog);
-		fprintf(stderr, "Error linking shader program: '%s'\n", ErrorLog);
-		exit(1);
+		// set the texture wrapping parameters
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		// set texture filtering parameters
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
-
-	glValidateProgram(ProgramId);
-	glGetProgramiv(ProgramId, GL_VALIDATE_STATUS, &Success);
-	if (!Success) {
-		glGetProgramInfoLog(ProgramId, sizeof(ErrorLog), NULL, ErrorLog);
-		fprintf(stderr, "Invalid shader program: '%s'\n", ErrorLog);
-		exit(1);
+	else {
+		std::cout << "Failed to load texture: " << strTexturePath << std::endl;
 	}
+	stbi_image_free(data);
 
-	glUseProgram(ProgramId);
-
-	ProjMatrixLocation = glGetUniformLocation(ProgramId, "ProjMatrix");
-	ViewMatrixLocation = glGetUniformLocation(ProgramId, "ViewMatrix");
-	WorldMatrixLocation = glGetUniformLocation(ProgramId, "WorldMatrix");
-
-}
-void DestroyShaders()
-{
-	glUseProgram(0);
-
-	glDetachShader(ProgramId, VertexShaderId);
-	glDetachShader(ProgramId, FragmentShaderId);
-
-	glDeleteShader(FragmentShaderId);
-	glDeleteShader(VertexShaderId);
-
-	glDeleteProgram(ProgramId);
-}
-void Initialize()
-{
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // culoarea de fond a ecranului
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_COLOR_MATERIAL);
-	glDisable(GL_LIGHTING);
-
-	glFrontFace(GL_CCW);
-	glCullFace(GL_BACK);
-
-	CreateVBO();
-	CreateShaders();
-
-	// Create camera
-	pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.5, 0.5, 10));
-}
-
-void RenderCube()
-{
-	glBindVertexArray(VaoId);
-
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, VboId);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, ColorBufferId);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IboId);
-	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-
-	glDisableVertexAttribArray(0);
-}
-
-void RenderFrame()
-{
-	glm::vec3 cubePositions[] = {
-	   glm::vec3(0.0f,  0.0f,   0.0f),
-	   glm::vec3(-5.0f,  5.0f,  5.0f),
-	   glm::vec3(-5.0f, -5.0f,  5.0f),
-	   glm::vec3(5.0f, -5.0f,  5.0f),
-	   glm::vec3(5.0f,  5.0f,  5.0f),
-	   glm::vec3(-5.0f,  5.0f, -5.0f),
-	   glm::vec3(-5.0f, -5.0f, -5.0f),
-	   glm::vec3(5.0f, -5.0f, -5.0f),
-	   glm::vec3(5.0f,  5.0f, -5.0f),
-	};
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glUseProgram(ProgramId);
-
-	glm::mat4 projection = pCamera->GetProjectionMatrix();
-	glUniformMatrix4fv(ProjMatrixLocation, 1, GL_FALSE, glm::value_ptr(projection));
-
-	glm::mat4 view = pCamera->GetViewMatrix();
-	glUniformMatrix4fv(ViewMatrixLocation, 1, GL_FALSE, glm::value_ptr(view));
-
-	/*glm::mat4 view;
-	float radius = 10.0f;
-	float camX = (float)sin(glfwGetTime()) * radius;
-	float camZ = (float)cos(glfwGetTime()) * radius;
-	view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));*/
-	glUniformMatrix4fv(ViewMatrixLocation, 1, GL_FALSE, glm::value_ptr(view));
-
-	for (unsigned int i = 0; i < sizeof(cubePositions) / sizeof(cubePositions[0]); i++) {
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 worldTransf = glm::translate(glm::mat4(1.0), cubePositions[i]);
-		glUniformMatrix4fv(WorldMatrixLocation, 1, GL_FALSE, glm::value_ptr(worldTransf));
-
-		RenderCube();
-	}
-}
-
-void Cleanup()
-{
-	DestroyShaders();
-	DestroyVBO();
-
-	delete pCamera;
+	return textureId;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void processInput(GLFWwindow* window);
+
+//textures
+void renderScene(const Shader& shader);
+void renderStegosaurus(const Shader& shader);
+void renderRoom();
+
+
+//objects
+
+void renderStegosaurus();
 
 // timing
 double deltaTime = 0.0f;    // time between current frame and last frame
 double lastFrame = 0.0f;
 
-int main()
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	if (key == GLFW_KEY_L && action == GLFW_PRESS)
+	{
+		rot = true;
+	}
+	if (key == GLFW_KEY_S && action == GLFW_PRESS)
+	{
+		rot = false;
+	}
+
+}
+
+int main(int argc, char** argv)
+{
+	std::string strFullExeFileName = argv[0];
+	std::string strExePath;
+	const size_t last_slash_idx = strFullExeFileName.rfind('\\');
+	if (std::string::npos != last_slash_idx) {
+		strExePath = strFullExeFileName.substr(0, last_slash_idx);
+	}
+
 	// glfw: initialize and configure
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -480,7 +455,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// glfw window creation
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Lab 5", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Explorarea muzeului Antipa", NULL, NULL);
 	if (window == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
@@ -489,73 +464,363 @@ int main()
 
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glfwSetKeyCallback(window, key_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
-
+	glfwSetKeyCallback(window, key_callback);
 	// tell GLFW to capture our mouse
-	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	glewInit();
 
-	Initialize();
+
+
+	// Create camera
+	pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 40.0, 255.0));
+
+	// configure global opengl state
+	// -----------------------------
+	glEnable(GL_DEPTH_TEST);
+
+	// build and compile shaders
+	// -------------------------
+	Shader shadowMappingShader("ShadowMapping.vs", "ShadowMapping.fs");
+	Shader shadowMappingDepthShader("ShadowMappingDepth.vs", "ShadowMappingDepth.fs");
+
+	// load textures
+	// -------------
+	unsigned int roomTexture = CreateTexture(strExePath + "\\Bricks.jpg");
+	unsigned int stegosaurusTexture = CreateTexture(strExePath + "\\stegosaurus.jpg");
+
+	// configure depth map FBO
+	// -----------------------
+	const unsigned int SHADOW_WIDTH = 4098, SHADOW_HEIGHT = 4098;
+	unsigned int depthMapFBO;
+	glGenFramebuffers(1, &depthMapFBO);
+	// create depth texture
+	unsigned int depthMap;
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+	// attach depth texture as FBO's depth buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	// shader configuration
+	// --------------------
+	shadowMappingShader.Use();
+	shadowMappingShader.SetInt("diffuseTexture", 0);
+	shadowMappingShader.SetInt("shadowMap", 1);
+
+	// lighting info
+	// -------------
+	glm::vec3 lightPos(-1.0f, 4.0f, -1.0f);
+
+	glEnable(GL_CULL_FACE);
 
 	// render loop
-	while (!glfwWindowShouldClose(window)) {
+	// -----------
+	while (!glfwWindowShouldClose(window))
+	{
 		// per-frame time logic
-		double currentFrame = glfwGetTime();
+		// --------------------
+		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
+		if (rot)
+		{
+			lightPos.x = 2.0 * sin(currentFrame);
+			lightPos.z = 2.0 * cos(currentFrame);
+
+		}
+
+
+		// input
+		// -----
+		processInput(window);
+
 		// render
-		RenderFrame();
+		// ------
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+
+		// 1. render depth of scene to texture (from light's perspective)
+		glm::mat4 lightProjection, lightView;
+		glm::mat4 lightSpaceMatrix;
+		float near_plane = 1.0f, far_plane = 7.5f;
+		lightProjection = glm::ortho(10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+		lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+		lightSpaceMatrix = lightProjection * lightView;
+
+		// render scene from light's point of view
+		shadowMappingDepthShader.Use();
+		shadowMappingDepthShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+
+		// reset viewport
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// 2. render scene as normal using the generated depth/shadow map 
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		shadowMappingShader.Use();
+		glm::mat4 projection = pCamera->GetProjectionMatrix();
+		glm::mat4 view = pCamera->GetViewMatrix();
+		shadowMappingShader.SetMat4("projection", projection);
+		shadowMappingShader.SetMat4("view", view);
+		// set light uniforms
+		shadowMappingShader.SetVec3("viewPos", pCamera->GetPosition());
+		shadowMappingShader.SetVec3("lightPos", lightPos);
+		shadowMappingShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+		//Camera
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, roomTexture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glDisable(GL_CULL_FACE);
+		renderScene(shadowMappingShader);
+
+
+		//Stegosaurus
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, stegosaurusTexture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glDisable(GL_CULL_FACE);
+		renderStegosaurus(shadowMappingShader);
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
-	Cleanup();
+	// optional: de-allocate all resources once they've outlived their purpose:
+	delete pCamera;
 
-	// glfw: terminate, clearing all previously allocated GLFW resources
 	glfwTerminate();
 	return 0;
 }
 
+// renders the 3D scene
+// --------------------
+void renderScene(const Shader& shader)
+{
+	glm::mat4 model;
+	shader.SetMat4("model", model);
+	renderRoom();
+}
+
+
+
+void renderStegosaurus(const Shader& shader)
+{
+	glm::mat4 object;
+	object = glm::mat4();
+	object = glm::translate(object, glm::vec3(100.0f, 6.f, 150.0f));
+	object = glm::scale(object, glm::vec3(10.f));
+	shader.SetMat4("model", object);
+	renderStegosaurus();
+}
+
+float verticesRoom[82000];
+unsigned int indicesRoom[72000];
+
+
+GLuint floorVAO, floorVBO, floorEBO;
+
+void renderRoom()
+{
+	if (floorVAO == 0)
+	{
+
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Warehouse.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[0];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			verticesRoom[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicesRoom[j] = indices.at(j);
+		}
+
+
+
+		glGenVertexArrays(1, &floorVAO);
+		glGenBuffers(1, &floorVBO);
+		glGenBuffers(1, &floorEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, floorVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(verticesRoom), verticesRoom, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, floorEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesRoom), &indicesRoom, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(floorVAO);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+
+	// render Cube
+	glBindVertexArray(floorVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, floorVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, floorEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+float stegosaurusVertices[820000];
+unsigned int indicestegosaurus[72000];
+GLuint stegosaurusVAO, stegosaurusVBO, stegosaurusEBO;
+
+void renderStegosaurus()
+{
+	if (stegosaurusVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("stegosaurus.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[0];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			stegosaurusVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicestegosaurus[j] = indices.at(j);
+		}
+
+		glGenVertexArrays(1, &stegosaurusVAO);
+		glGenBuffers(1, &stegosaurusVBO);
+		glGenBuffers(1, &stegosaurusEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, stegosaurusVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(stegosaurusVertices), stegosaurusVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, stegosaurusEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicestegosaurus), &indicestegosaurus, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(stegosaurusVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	// render Cube
+	glBindVertexArray(stegosaurusVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, stegosaurusVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, stegosaurusEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+
+
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
-	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-		pCamera->ProcessKeyboard(Camera::EMovementType::EForward, deltaTime);
-	}
-	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-		pCamera->ProcessKeyboard(Camera::EMovementType::EBackward, deltaTime);
-
-	}
-	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-		pCamera->ProcessKeyboard(Camera::EMovementType::ELeft, deltaTime);
-
-	}
-	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-		pCamera->ProcessKeyboard(Camera::EMovementType::ERight, deltaTime);
-
-	}
-	if (glfwGetKey(window, GLFW_KEY_PAGE_UP) == GLFW_PRESS) {
-		pCamera->ProcessKeyboard(Camera::EMovementType::EPageUp, deltaTime);
-
-	}
-	if (glfwGetKey(window, GLFW_KEY_PAGE_DOWN) == GLFW_PRESS) {
-		pCamera->ProcessKeyboard(Camera::EMovementType::EPageDown, deltaTime);
-
-	}
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(FORWARD, (float)deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(BACKWARD, (float)deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(LEFT, (float)deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(RIGHT, (float)deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_PAGE_UP) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(UP, (float)deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_PAGE_DOWN) == GLFW_PRESS)
+		pCamera->ProcessKeyboard(DOWN, (float)deltaTime);
 
 	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
 		int width, height;
 		glfwGetWindowSize(window, &width, &height);
-		pCamera->Set(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.5, 0.5, 10));
+		pCamera->Reset(width, height);
+
 	}
 }
 
@@ -563,14 +828,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 // ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-	// make sure the viewport matches the new window dimensions; note that width and
+	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
-	//pCamera->Reshape(width, height);
+	pCamera->Reshape(width, height);
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	pCamera->MouseControl(xpos, ypos);
+	pCamera->MouseControl((float)xpos, (float)ypos);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yOffset)

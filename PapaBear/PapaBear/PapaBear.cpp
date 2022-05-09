@@ -415,12 +415,18 @@ void processInput(GLFWwindow* window);
 //textures
 void renderScene(const Shader& shader);
 void renderStegosaurus(const Shader& shader);
+void renderGrizzly(const Shader& shader);
+void renderPtero(const Shader& shader);
 void renderRoom();
 
 
 //objects
 
 void renderStegosaurus();
+void renderGrizzly();
+void renderGrizzlyFace();
+void renderGrizzlyEyes();
+void renderPtero();
 
 // timing
 double deltaTime = 0.0f;    // time between current frame and last frame
@@ -489,7 +495,9 @@ int main(int argc, char** argv)
 	// load textures
 	// -------------
 	unsigned int roomTexture = CreateTexture(strExePath + "\\Bricks.jpg");
-	unsigned int stegosaurusTexture = CreateTexture(strExePath + "\\stegosaurus.jpg");
+	unsigned int stegosaurusTexture = CreateTexture(strExePath + "\\stegosaurusSkin.jpg");
+	unsigned int grizzlyTexture = CreateTexture(strExePath + "\\GrizzlyDiffuse.png");
+	unsigned int pteroTexture = CreateTexture(strExePath + "\\pteroSkin.jpg");
 
 	// configure depth map FBO
 	// -----------------------
@@ -605,6 +613,24 @@ int main(int argc, char** argv)
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
 		renderStegosaurus(shadowMappingShader);
+		
+		//Grizzly
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, grizzlyTexture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glDisable(GL_CULL_FACE);
+		renderGrizzly(shadowMappingShader);
+
+		//Pterodactyle
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, pteroTexture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glDisable(GL_CULL_FACE);
+		renderPtero(shadowMappingShader);
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
@@ -634,17 +660,39 @@ void renderStegosaurus(const Shader& shader)
 	glm::mat4 object;
 	object = glm::mat4();
 	object = glm::translate(object, glm::vec3(100.0f, 6.f, 150.0f));
-	object = glm::scale(object, glm::vec3(10.f));
+	object = glm::scale(object, glm::vec3(20.f));
+	object = glm::rotate(object, glm::radians(270.0f), glm::vec3(0.f, 1.f, 0.f));
 	shader.SetMat4("model", object);
 	renderStegosaurus();
 }
 
+void renderGrizzly(const Shader& shader)
+{
+	glm::mat4 object;
+	object = glm::mat4();
+	object = glm::translate(object, glm::vec3(10.0f, 10.f, -120.0f));
+	object = glm::scale(object, glm::vec3(35.f));
+
+	shader.SetMat4("model", object);
+	renderGrizzly();
+	renderGrizzlyFace();
+	renderGrizzlyEyes();
+}
+
+void renderPtero(const Shader& shader)
+{
+	glm::mat4 object;
+	object = glm::mat4();
+	object = glm::translate(object, glm::vec3(100.0f, 20.f, 25.0f));
+	object = glm::scale(object, glm::vec3(3500.f));
+	object = glm::rotate(object, glm::radians(270.0f), glm::vec3(0.f, 1.f, 0.f));
+	shader.SetMat4("model", object);
+	renderPtero();
+}
+
 float verticesRoom[82000];
 unsigned int indicesRoom[72000];
-
-
 GLuint floorVAO, floorVBO, floorEBO;
-
 void renderRoom()
 {
 	if (floorVAO == 0)
@@ -653,7 +701,7 @@ void renderRoom()
 		std::vector<float> vertices;
 		std::vector<float> indices;
 
-		Loader.LoadFile("Warehouse.obj");
+		Loader.LoadFile("Room.obj");
 		objl::Mesh curMesh = Loader.LoadedMeshes[0];
 		int size = curMesh.Vertices.size();
 
@@ -722,7 +770,6 @@ void renderRoom()
 float stegosaurusVertices[820000];
 unsigned int indicestegosaurus[72000];
 GLuint stegosaurusVAO, stegosaurusVBO, stegosaurusEBO;
-
 void renderStegosaurus()
 {
 	if (stegosaurusVAO == 0)
@@ -795,6 +842,321 @@ void renderStegosaurus()
 	glBindVertexArray(0);
 }
 
+
+float pteroVertices[820000];
+unsigned int indiceptero[72000];
+GLuint pteroVAO, pteroVBO, pteroEBO;
+void renderPtero()
+{
+	if (pteroVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Ptero.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[0];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			pteroVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indiceptero[j] = indices.at(j);
+		}
+
+		glGenVertexArrays(1, &pteroVAO);
+		glGenBuffers(1, &pteroVBO);
+		glGenBuffers(1, &pteroEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, pteroVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(pteroVertices), pteroVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pteroEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indiceptero), &indiceptero, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(pteroVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	// render Cube
+	glBindVertexArray(pteroVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, pteroVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pteroEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+
+float grizzlyVertices[820000];
+unsigned int indicesGrizzly[72000];
+GLuint grizzlyVAO, grizzlyVBO, grizzlyEBO;
+void renderGrizzly()
+{
+	if (grizzlyVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Grizzly.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[0];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			grizzlyVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicesGrizzly[j] = indices.at(j);
+		}
+
+
+
+
+		glGenVertexArrays(1, &grizzlyVAO);
+		glGenBuffers(1, &grizzlyVBO);
+		glGenBuffers(1, &grizzlyEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, grizzlyVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(grizzlyVertices), grizzlyVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grizzlyEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesGrizzly), &indicesGrizzly, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(grizzlyVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+
+
+
+
+	}
+	// render Cube
+	glBindVertexArray(grizzlyVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, grizzlyVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grizzlyEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+float grizzlyFaceVertices[820000];
+unsigned int indicesGrizzlyFace[72000];
+GLuint grizzlyFaceVAO, grizzlyFaceVBO, grizzlyFaceEBO;
+void renderGrizzlyFace()
+{
+	if (grizzlyFaceVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Grizzly.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[2];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			grizzlyFaceVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicesGrizzlyFace[j] = indices.at(j);
+		}
+
+
+
+
+		glGenVertexArrays(1, &grizzlyFaceVAO);
+		glGenBuffers(1, &grizzlyFaceVBO);
+		glGenBuffers(1, &grizzlyFaceEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, grizzlyFaceVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(grizzlyFaceVertices), grizzlyFaceVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grizzlyFaceEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesGrizzlyFace), &indicesGrizzlyFace, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(grizzlyFaceVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	// render Cube
+	glBindVertexArray(grizzlyFaceVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, grizzlyFaceVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grizzlyFaceEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+float grizzlyEyesVertices[820000];
+unsigned int indicesGrizzlyEyes[72000];
+GLuint grizzlyEyesVAO, grizzlyEyesVBO, grizzlyEyesEBO;
+void renderGrizzlyEyes()
+{
+	if (grizzlyEyesVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Grizzly.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[1];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			grizzlyEyesVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicesGrizzlyEyes[j] = indices.at(j);
+		}
+
+
+
+
+		glGenVertexArrays(1, &grizzlyEyesVAO);
+		glGenBuffers(1, &grizzlyEyesVBO);
+		glGenBuffers(1, &grizzlyEyesEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, grizzlyEyesVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(grizzlyEyesVertices), grizzlyEyesVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grizzlyEyesEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesGrizzlyEyes), &indicesGrizzlyEyes, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(grizzlyEyesVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	// render Cube
+	glBindVertexArray(grizzlyEyesVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, grizzlyEyesVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, grizzlyEyesEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
 
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly

@@ -25,7 +25,9 @@
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
-bool rot = false;
+
+glm::vec3 lightPos(140.0f, 100.0f, -40.0f);
+
 objl::Loader Loader;
 enum ECameraMovementType
 {
@@ -417,7 +419,7 @@ void renderScene(const Shader& shader);
 void renderStegosaurus(const Shader& shader);
 void renderVelociraptor(const Shader& shader);
 void renderGrizzly(const Shader& shader);
-void renderPtero(const Shader& shader);
+void renderPtero(const Shader& shader,glm::vec3&light);
 void renderCuteDino(const Shader& shader);
 void renderRoom();
 
@@ -425,7 +427,11 @@ void renderRoom();
 //objects
 void renderStegosaurus();
 void renderCuteDino();
-void renderVelociraptor();
+void renderVelociraptorBody();
+void renderVelociraptorEyes();
+void renderVelociraptorLowerJaw();
+void renderVelociraptorClaws();
+void renderVelociraptorUpperJaw();
 void renderGrizzly();
 void renderGrizzlyFace();
 void renderGrizzlyEyes();
@@ -436,18 +442,6 @@ void renderPtero();
 double deltaTime = 0.0f;    // time between current frame and last frame
 double lastFrame = 0.0f;
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	if (key == GLFW_KEY_L && action == GLFW_PRESS)
-	{
-		rot = true;
-	}
-	if (key == GLFW_KEY_S && action == GLFW_PRESS)
-	{
-		rot = false;
-	}
-
-}
 
 int main(int argc, char** argv)
 {
@@ -476,7 +470,7 @@ int main(int argc, char** argv)
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
-	glfwSetKeyCallback(window, key_callback);
+
 	// tell GLFW to capture our mouse
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -536,10 +530,6 @@ int main(int argc, char** argv)
 	shadowMappingShader.SetInt("diffuseTexture", 0);
 	shadowMappingShader.SetInt("shadowMap", 1);
 
-	// lighting info
-	// -------------
-	glm::vec3 lightPos(-1.0f, 4.0f, -1.0f);
-
 	glEnable(GL_CULL_FACE);
 
 	// render loop
@@ -552,14 +542,6 @@ int main(int argc, char** argv)
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		if (rot)
-		{
-			lightPos.x = 2.0 * sin(currentFrame);
-			lightPos.z = 2.0 * cos(currentFrame);
-
-		}
-
-
 		// input
 		// -----
 		processInput(window);
@@ -569,7 +551,8 @@ int main(int argc, char** argv)
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
+		static float fRadius = 10.f;
+		lightPos.y = fRadius * std::cos(currentFrame);
 
 		// 1. render depth of scene to texture (from light's perspective)
 		glm::mat4 lightProjection, lightView;
@@ -636,7 +619,7 @@ int main(int argc, char** argv)
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
-		renderPtero(shadowMappingShader);
+		renderPtero(shadowMappingShader,lightPos);
 
 		//Velociraptor
 
@@ -684,12 +667,15 @@ void renderVelociraptor(const Shader& shader)
 	glm::mat4 object;
 	object = glm::mat4();
 	object = glm::translate(object, glm::vec3(100.0f, 6.f, 50.0f));
-	object = glm::scale(object, glm::vec3(5.f));
+	object = glm::scale(object, glm::vec3(7.f));
 	object = glm::rotate(object, glm::radians(270.0f), glm::vec3(0.f, 1.f, 0.f));
 	shader.SetMat4("model", object);
-	renderVelociraptor();
+	renderVelociraptorBody();
+	renderVelociraptorEyes();
+	renderVelociraptorLowerJaw();
+	renderVelociraptorClaws();
+	renderVelociraptorUpperJaw();
 }
-
 void renderGrizzly(const Shader& shader)
 {
 	glm::mat4 object;
@@ -703,11 +689,11 @@ void renderGrizzly(const Shader& shader)
 	renderGrizzlyEyes();
 }
 
-void renderPtero(const Shader& shader)
+void renderPtero(const Shader& shader, glm::vec3&light)
 {
 	glm::mat4 object;
 	object = glm::mat4();
-	object = glm::translate(object, glm::vec3(100.0f, 20.f, 25.0f));
+	object = glm::translate(object, lightPos);
 	object = glm::scale(object, glm::vec3(3500.f));
 	object = glm::rotate(object, glm::radians(270.0f), glm::vec3(0.f, 1.f, 0.f));
 	shader.SetMat4("model", object);
@@ -720,7 +706,7 @@ void renderStegosaurus(const Shader& shader)
 {
 	glm::mat4 object;
 	object = glm::mat4();
-	object = glm::translate(object, glm::vec3(100.0f, 6.f, 150.0f));
+	object = glm::translate(object, glm::vec3(100.0f, 8.5f, 150.0f));
 	object = glm::scale(object, glm::vec3(10.f));
 	object = glm::rotate(object, glm::radians(270.0f), glm::vec3(0.f, 1.f, 0.f));
 	shader.SetMat4("model", object);
@@ -973,10 +959,12 @@ void renderCuteDino()
 	glBindVertexArray(0);
 }
 
+
+
 float velociraptorVertices[820000];
 unsigned int indicevelociraptor[72000];
 GLuint velociraptorVAO, velociraptorVBO, velociraptorEBO;
-void renderVelociraptor()
+void renderVelociraptorBody()
 {
 	if (velociraptorVAO == 0)
 	{
@@ -1048,6 +1036,306 @@ void renderVelociraptor()
 	glBindVertexArray(0);
 }
 
+
+float velociraptorEyesVertices[820000];
+unsigned int indicevelociraptorEyes[72000];
+GLuint velociraptorEyesVAO, velociraptorEyesVBO, velociraptorEyesEBO;
+void renderVelociraptorEyes()
+{
+	if (velociraptorEyesVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Velociraptor.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[1];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			velociraptorEyesVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicevelociraptorEyes[j] = indices.at(j);
+		}
+
+		glGenVertexArrays(1, &velociraptorEyesVAO);
+		glGenBuffers(1, &velociraptorEyesVBO);
+		glGenBuffers(1, &velociraptorEyesEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, velociraptorEyesVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(velociraptorEyesVertices), velociraptorEyesVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, velociraptorEyesEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicevelociraptorEyes), &indicevelociraptorEyes, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(velociraptorEyesVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	// render Cube
+	glBindVertexArray(velociraptorEyesVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, velociraptorEyesVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, velociraptorEyesEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+float velociraptorLowerJawVertices[820000];
+unsigned int indicevelociraptorLowerJaw[72000];
+GLuint velociraptorLowerJawVAO, velociraptorLowerJawVBO, velociraptorLowerJawEBO;
+void renderVelociraptorLowerJaw()
+{
+	if (velociraptorLowerJawVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Velociraptor.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[2];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			velociraptorLowerJawVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicevelociraptorLowerJaw[j] = indices.at(j);
+		}
+
+		glGenVertexArrays(1, &velociraptorLowerJawVAO);
+		glGenBuffers(1, &velociraptorLowerJawVBO);
+		glGenBuffers(1, &velociraptorLowerJawEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, velociraptorLowerJawVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(velociraptorLowerJawVertices), velociraptorLowerJawVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, velociraptorLowerJawEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicevelociraptorLowerJaw), &indicevelociraptorLowerJaw, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(velociraptorLowerJawVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	// render Cube
+	glBindVertexArray(velociraptorLowerJawVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, velociraptorLowerJawVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, velociraptorLowerJawEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+float velociraptorClawsVertices[820000];
+unsigned int indicevelociraptorClaws[72000];
+GLuint velociraptorClawsVAO, velociraptorClawsVBO, velociraptorClawsEBO;
+void renderVelociraptorClaws()
+{
+	if (velociraptorClawsVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Velociraptor.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[3];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			velociraptorClawsVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicevelociraptorClaws[j] = indices.at(j);
+		}
+
+		glGenVertexArrays(1, &velociraptorClawsVAO);
+		glGenBuffers(1, &velociraptorClawsVBO);
+		glGenBuffers(1, &velociraptorClawsEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, velociraptorClawsVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(velociraptorClawsVertices), velociraptorClawsVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, velociraptorClawsEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicevelociraptorClaws), &indicevelociraptorClaws, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(velociraptorClawsVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	// render Cube
+	glBindVertexArray(velociraptorClawsVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, velociraptorClawsVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, velociraptorClawsEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+float velociraptorUpperJawVertices[820000];
+unsigned int indicevelociraptorUpperJaw[72000];
+GLuint velociraptorUpperJawVAO, velociraptorUpperJawVBO, velociraptorUpperJawEBO;
+void renderVelociraptorUpperJaw()
+{
+	if (velociraptorUpperJawVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Velociraptor.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[4];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			velociraptorUpperJawVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicevelociraptorUpperJaw[j] = indices.at(j);
+		}
+
+		glGenVertexArrays(1, &velociraptorUpperJawVAO);
+		glGenBuffers(1, &velociraptorUpperJawVBO);
+		glGenBuffers(1, &velociraptorUpperJawEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, velociraptorUpperJawVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(velociraptorUpperJawVertices), velociraptorUpperJawVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, velociraptorUpperJawEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicevelociraptorUpperJaw), &indicevelociraptorUpperJaw, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(velociraptorUpperJawVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	// render Cube
+	glBindVertexArray(velociraptorUpperJawVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, velociraptorUpperJawVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, velociraptorUpperJawEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
 
 float pteroVertices[820000];
 unsigned int indiceptero[72000];

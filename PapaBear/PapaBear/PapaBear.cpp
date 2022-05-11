@@ -422,6 +422,7 @@ void renderGrizzly(const Shader& shader);
 void renderPtero(const Shader& shader,glm::vec3&light);
 void renderTree(const Shader& shader);
 void renderDodo(const Shader& shader);
+//void renderBirds(const Shader& shader);
 void renderOwl(const Shader& shader);
 void renderBird(const Shader& shader);
 void renderCuteDino(const Shader& shader);
@@ -443,6 +444,7 @@ void renderPtero();
 void renderTree();
 void renderDodo();
 void renderDodoHead();
+//void renderBirds();
 void renderOwl();
 void renderBird();
 
@@ -509,7 +511,8 @@ int main(int argc, char** argv)
 	unsigned int veloTexture = CreateTexture(strExePath + "\\velociraptorSkin.jpg");
 	unsigned int cuteDinoTexture = CreateTexture(strExePath + "\\cuteDino.jpg");
 	unsigned int treeTexture = CreateTexture(strExePath + "\\GrizzlyDiffuse.png");
-	unsigned int DodoTexture = CreateTexture(strExePath + "\\dodo.jpg");
+	unsigned int DodoTexture = CreateTexture(strExePath + "\\floor2.jpg");
+	unsigned int BirdsTexture = CreateTexture(strExePath + "\\birds.jpeg");
 	unsigned int owlTexture = CreateTexture(strExePath + "\\owl.jpg");
 	unsigned int birdTexture = CreateTexture(strExePath + "\\bird.jpg");
 
@@ -669,10 +672,18 @@ int main(int argc, char** argv)
 		glDisable(GL_CULL_FACE);
 		renderDodo(shadowMappingShader);
 
+		//Birds
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, BirdsTexture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glDisable(GL_CULL_FACE);
+		//renderBirds(shadowMappingShader);
+
 		//owl
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, DodoTexture);
+		glBindTexture(GL_TEXTURE_2D, owlTexture);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
@@ -762,12 +773,23 @@ void renderDodo(const Shader& shader)
 {
 	glm::mat4 object;
 	object = glm::mat4();
-	object = glm::translate(object, glm::vec3(-110.0f, 10.f, 120.0f));
-	object = glm::scale(object, glm::vec3(1.5f));
+	object = glm::translate(object, glm::vec3(10.0f, 25.f, 120.0f));
+	object = glm::scale(object, glm::vec3(100.5f));
 
 	shader.SetMat4("model", object);
 	renderDodo();
-	renderDodoHead();
+	//renderDodoHead();
+}
+void renderBirds(const Shader& shader)
+{
+	glm::mat4 object;
+	object = glm::mat4();
+	object = glm::translate(object, glm::vec3(-110.0f, 10.f, 90.0f));
+	object = glm::scale(object, glm::vec3(100.5f));
+
+	shader.SetMat4("model", object);
+	//renderBirds();
+
 }
 void renderOwl(const Shader& shader)
 {
@@ -1523,7 +1545,7 @@ void renderDodo()
 		std::vector<float> indices;
 
 		Loader.LoadFile("Dodo.obj");
-		objl::Mesh curMesh = Loader.LoadedMeshes[1];
+		objl::Mesh curMesh = Loader.LoadedMeshes[0];
 		int size = curMesh.Vertices.size();
 
 		for (int j = 0; j < curMesh.Vertices.size(); j++)
@@ -1677,7 +1699,88 @@ void renderDodoHead()
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 	glBindVertexArray(0);
 }
+float birdsVertices[820000];
+unsigned int indicesBirds[72000];
+GLuint birdsVAO, birdsVBO, birdsEBO;
+void renderBirds()
+{
+	if (birdsVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
 
+		Loader.LoadFile("Birds.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[1];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			birdsVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicesBirds[j] = indices.at(j);
+		}
+
+
+
+
+		glGenVertexArrays(1, &birdsVAO);
+		glGenBuffers(1, &birdsVBO);
+		glGenBuffers(1, &birdsEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, birdsVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(birdsVertices), birdsVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, birdsEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesBirds), &indicesBirds, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(birdsVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+
+
+
+
+	}
+	// render Cube
+	glBindVertexArray(birdsVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, birdsVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, birdsEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
 
 float verticesOwl[82000];
 unsigned int indicesOwl[72000];

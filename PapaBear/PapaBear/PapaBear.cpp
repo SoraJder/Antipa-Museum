@@ -416,11 +416,12 @@ void processInput(GLFWwindow* window);
 
 //textures
 void renderScene(const Shader& shader);
-//void renderStegosaurus(const Shader& shader);
-//void renderVelociraptor(const Shader& shader);
-//void renderGrizzly(const Shader& shader);
+void renderStegosaurus(const Shader& shader);
+void renderVelociraptor(const Shader& shader);
+void renderGrizzly(const Shader& shader);
 void renderPtero(const Shader& shader,glm::vec3&light);
 void renderTree(const Shader& shader);
+void renderDodo(const Shader& shader);
 void renderOwl(const Shader& shader);
 void renderBird(const Shader& shader);
 void renderCuteDino(const Shader& shader);
@@ -428,18 +429,20 @@ void renderRoom();
 
 
 //objects
-//void renderStegosaurus();
+void renderStegosaurus();
 void renderCuteDino();
-//void renderVelociraptorBody();
-//void renderVelociraptorEyes();
-//void renderVelociraptorLowerJaw();
-//void renderVelociraptorClaws();
-//void renderVelociraptorUpperJaw();
-//void renderGrizzly();
-//void renderGrizzlyFace();
-//void renderGrizzlyEyes();
-//void renderPtero();
+void renderVelociraptorBody();
+void renderVelociraptorEyes();
+void renderVelociraptorLowerJaw();
+void renderVelociraptorClaws();
+void renderVelociraptorUpperJaw();
+void renderGrizzly();
+void renderGrizzlyFace();
+void renderGrizzlyEyes();
+void renderPtero();
 void renderTree();
+void renderDodo();
+void renderDodoHead();
 void renderOwl();
 void renderBird();
 
@@ -506,6 +509,7 @@ int main(int argc, char** argv)
 	unsigned int veloTexture = CreateTexture(strExePath + "\\velociraptorSkin.jpg");
 	unsigned int cuteDinoTexture = CreateTexture(strExePath + "\\cuteDino.jpg");
 	unsigned int treeTexture = CreateTexture(strExePath + "\\GrizzlyDiffuse.png");
+	unsigned int DodoTexture = CreateTexture(strExePath + "\\dodo.jpg");
 	unsigned int owlTexture = CreateTexture(strExePath + "\\owl.jpg");
 	unsigned int birdTexture = CreateTexture(strExePath + "\\bird.jpg");
 
@@ -611,7 +615,7 @@ int main(int argc, char** argv)
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
-		//renderStegosaurus(shadowMappingShader);
+		renderStegosaurus(shadowMappingShader);
 
 		//Grizzly
 
@@ -620,7 +624,7 @@ int main(int argc, char** argv)
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
-		//renderGrizzly(shadowMappingShader);
+		renderGrizzly(shadowMappingShader);
 
 		//Pterodactyle
 
@@ -638,7 +642,7 @@ int main(int argc, char** argv)
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
-		//renderVelociraptor(shadowMappingShader);
+		renderVelociraptor(shadowMappingShader);
 
 		//cute dino
 
@@ -656,10 +660,19 @@ int main(int argc, char** argv)
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
 		renderTree(shadowMappingShader);
+		
+		//Dodo
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, DodoTexture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glDisable(GL_CULL_FACE);
+		renderDodo(shadowMappingShader);
+
 		//owl
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, owlTexture);
+		glBindTexture(GL_TEXTURE_2D, DodoTexture);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
@@ -704,11 +717,11 @@ void renderVelociraptor(const Shader& shader)
 	object = glm::scale(object, glm::vec3(7.f));
 	object = glm::rotate(object, glm::radians(270.0f), glm::vec3(0.f, 1.f, 0.f));
 	shader.SetMat4("model", object);
-	//renderVelociraptorBody();
-	//renderVelociraptorEyes();
-	//renderVelociraptorLowerJaw();
-	//renderVelociraptorClaws();
-	//renderVelociraptorUpperJaw();
+	renderVelociraptorBody();
+	renderVelociraptorEyes();
+	renderVelociraptorLowerJaw();
+	renderVelociraptorClaws();
+	renderVelociraptorUpperJaw();
 }
 void renderGrizzly(const Shader& shader)
 {
@@ -718,9 +731,9 @@ void renderGrizzly(const Shader& shader)
 	object = glm::scale(object, glm::vec3(35.f));
 
 	shader.SetMat4("model", object);
-	//renderGrizzly();
-	//renderGrizzlyFace();
-	//renderGrizzlyEyes();
+	renderGrizzly();
+	renderGrizzlyFace();
+	renderGrizzlyEyes();
 }
 
 void renderPtero(const Shader& shader, glm::vec3&light)
@@ -731,25 +744,37 @@ void renderPtero(const Shader& shader, glm::vec3&light)
 	object = glm::scale(object, glm::vec3(3500.f));
 	object = glm::rotate(object, glm::radians(270.0f), glm::vec3(0.f, 1.f, 0.f));
 	shader.SetMat4("model", object);
-	//renderPtero();
+	renderPtero();
 }
 
 void renderTree(const Shader& shader)
 {
 	glm::mat4 object;
 	object = glm::mat4();
-	object = glm::translate(object, glm::vec3(-110.0f, -2.f, 135.0f));
+	object = glm::translate(object, glm::vec3(-110.0f, -7.f, 135.0f));
 	object = glm::scale(object, glm::vec3(1.3f));
 
 	shader.SetMat4("model", object);
 	renderTree();
+}
+
+void renderDodo(const Shader& shader)
+{
+	glm::mat4 object;
+	object = glm::mat4();
+	object = glm::translate(object, glm::vec3(-110.0f, 10.f, 120.0f));
+	object = glm::scale(object, glm::vec3(1.5f));
+
+	shader.SetMat4("model", object);
+	renderDodo();
+	renderDodoHead();
 }
 void renderOwl(const Shader& shader)
 {
 	//render owl
 	glm::mat4 model;
 	model = glm::mat4();
-	model = glm::translate(model, glm::vec3(-90.0f, 57.f, 169.0f));
+	model = glm::translate(model, glm::vec3(-90.0f, 52.f, 169.0f));
 	model = glm::scale(model, glm::vec3(10.f));
 	model = glm::rotate(model, glm::radians(50.0f), glm::vec3(0.f, 1.f, 0.f));
 	shader.SetMat4("model", model);
@@ -760,7 +785,7 @@ void renderBird(const Shader& shader)
 {
 	glm::mat4 object;
 	object = glm::mat4();
-	object = glm::translate(object, glm::vec3(-49.0f, 41.3f, 163.0f));
+	object = glm::translate(object, glm::vec3(-49.0f, 36.3f, 163.0f));
 	object = glm::scale(object, glm::vec3(7.f));
 	object = glm::rotate(object, glm::radians(180.0f), glm::vec3(0.f, 1.f, 0.f));
 
@@ -776,7 +801,7 @@ void renderStegosaurus(const Shader& shader)
 	object = glm::scale(object, glm::vec3(10.f));
 	object = glm::rotate(object, glm::radians(270.0f), glm::vec3(0.f, 1.f, 0.f));
 	shader.SetMat4("model", object);
-	//renderStegosaurus();
+	renderStegosaurus();
 }
 
 void renderCuteDino(const Shader& shader)
@@ -1485,6 +1510,175 @@ void renderTree()
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 	glBindVertexArray(0);
 }
+
+
+float dodoVertices[820000];
+unsigned int indicesDodo[72000];
+GLuint dodoVAO, dodoVBO, dodoEBO;
+void renderDodo()
+{
+	if (dodoVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Dodo.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[1];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			dodoVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicesDodo[j] = indices.at(j);
+		}
+
+
+
+
+		glGenVertexArrays(1, &dodoVAO);
+		glGenBuffers(1, &dodoVBO);
+		glGenBuffers(1, &dodoEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, dodoVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(dodoVertices), dodoVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dodoEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesDodo), &indicesDodo, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(dodoVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+
+
+
+
+	}
+	// render Cube
+	glBindVertexArray(dodoVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, dodoVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dodoEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+float dodoHeadVertices[820000];
+unsigned int indicesDodoHead[72000];
+GLuint dodoHeadVAO, dodoHeadVBO, dodoHeadEBO;
+void renderDodoHead()
+{
+	if (dodoHeadVAO == 0)
+	{
+		std::vector<float> vertices;
+		std::vector<float> indices;
+
+		Loader.LoadFile("Dodo.obj");
+		objl::Mesh curMesh = Loader.LoadedMeshes[2];
+		int size = curMesh.Vertices.size();
+
+		for (int j = 0; j < curMesh.Vertices.size(); j++)
+		{
+
+			vertices.push_back((float)curMesh.Vertices[j].Position.X);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Position.Z);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.X);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Y);
+			vertices.push_back((float)curMesh.Vertices[j].Normal.Z);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.X);
+			vertices.push_back((float)curMesh.Vertices[j].TextureCoordinate.Y);
+		}
+		for (int j = 0; j < vertices.size(); j++)
+		{
+			dodoHeadVertices[j] = vertices.at(j);
+		}
+
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+
+			indices.push_back((float)curMesh.Indices[j]);
+
+		}
+		for (int j = 0; j < curMesh.Indices.size(); j++)
+		{
+			indicesDodoHead[j] = indices.at(j);
+		}
+
+
+
+
+		glGenVertexArrays(1, &dodoHeadVAO);
+		glGenBuffers(1, &dodoHeadVBO);
+		glGenBuffers(1, &dodoHeadEBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, dodoHeadVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(dodoHeadVertices), dodoHeadVertices, GL_DYNAMIC_DRAW);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dodoHeadEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesDodoHead), &indicesDodoHead, GL_DYNAMIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(dodoHeadVAO);
+		glEnableVertexAttribArray(0);
+
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+
+
+
+
+	}
+	// render Cube
+	glBindVertexArray(dodoHeadVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, dodoHeadVBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dodoHeadEBO);
+	int indexArraySize;
+	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
+	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+}
+
+
 float verticesOwl[82000];
 unsigned int indicesOwl[72000];
 GLuint owlVAO, owlVBO, owlEBO;
